@@ -175,11 +175,11 @@ endif()
 ##################################### Set Application options #####################################
 
 ######## Set URLs ########
-set(Launcher_NEWS_RSS_URL "https://pineconemc.ru/feed/feed.xml" CACHE STRING "URL to fetch Prism Launcher's news RSS feed from.")
+set(Launcher_NEWS_RSS_URL "https://github.com/feed/feed.xml" CACHE STRING "URL to fetch Prism Launcher's news RSS feed from.")
 set(Launcher_NEWS_OPEN_URL "https://discord.gg/5kcBCvnbTp" CACHE STRING "URL that gets opened when the user clicks 'More News'")
 set(Launcher_WIKI_URL "https://prismlauncher.org/wiki/" CACHE STRING "URL that gets opened when the user clicks 'Launcher Help'")
 set(Launcher_HELP_URL "https://prismlauncher.org/wiki/help-pages/%1" CACHE STRING "URL (with arg %1 to be substituted with page-id) that gets opened when the user requests help in a dialog window")
-set(Launcher_LOGIN_CALLBACK_URL "https://pineconemc.ru/successful-login" CACHE STRING "URL that gets opened when the user successfully logins.")
+set(Launcher_LOGIN_CALLBACK_URL "https://github.com/successful-login" CACHE STRING "URL that gets opened when the user successfully logins.")
 set(Launcher_LEGACY_FMLLIBS_BASE_URL "https://files.pineconemc.ru/fmllibs/" CACHE STRING "URL for legacy (<=1.5.2) FML Libraries.")
 
 ######## Set version numbers ########

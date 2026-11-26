@@ -1,76 +1,34 @@
-> [!CAUTION]
-> **There's now malicious links in the wild that disguise themselves as this project.**
->
-> Make sure that you download PineconeMC from `elyprismlauncher.github.io` and/or `pineconemc.ru`.
+# BSDprism
 
-<p align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="/program_info/ru.pineconemc.launcher.logo-darkmode.svg">
-  <source media="(prefers-color-scheme: light)" srcset="/program_info/ru.pineconemc.launcher.logo.svg">
-  <img alt="ru.pineconemc.launcher" src="/program_info/ru.pineconemc.launcher.logo.svg" width="40%">
-</picture>
-</p>
+**BSDprism** is an independent, unofficial fork of [ElyPrismLauncher / Prism Launcher](https://github.com) ported to run natively on **FreeBSD** (14.x / 15.x).
 
-<p align="center">
-  This <b>fork</b> of Prism Launcher adds integrated support for Ely.by accounts (MSA accounts can still be used)<br />
-  <br />This is <b>not</b> endorsed by Prism Launcher or Ely.by.
-</p>
+> **Disclaimer:**
+> This project is an independent community port for FreeBSD. It is **not** affiliated with, endorsed by, or supported by PineconeMC, ElyPrismLauncher, Prism Launcher, Mojang Studios, or Microsoft. Please report any FreeBSD-specific issues strictly in this repository (`mellstroydmitry-maker/bsdprism`).
 
-## Why this fork?
+## Key FreeBSD Changes
+- **Native LWJGL 2 & LWJGL 3 Integration:** Automatically maps Minecraft LWJGL `.jar` and native `.so` libraries to FreeBSD system packages (`/usr/local/lib/lwjgl`, `/usr/local/lib/lwjgl3`) and skips extracting incompatible Linux binaries.
+- **Full Minecraft Version Support (1.7.10 – 1.21+):**
+  - Includes a lightweight bytecode agent (`bsdprism-glfw-fix.jar`) that transparently patches legacy `GLFWImage.mallocStack` calls to `GLFWImage.malloc` for Minecraft 1.13 – 1.18.2.
+  - Forces `GLFW_PLATFORM=x11` for Minecraft 1.20+ to prevent `glfwSetWindowIcon` protocol crashes on X11 and Wayland/XWayland sessions.
+- **Native OSS Audio:** Automatically sets `ALSOFT_DRIVERS=oss` for `openal-soft`.
+- **FreeBSD Hardware Detection:** Implements native RAM (`sysctl hw.physmem`) and GPU (`pciconf`) discovery.
 
-There are already quite a few forks out in the wild that add Ely.by support and/or disable the Microsoft account requirement. This fork goes beyond simply adding a login-password prompt and authlib-injector download.
+## Quick Install (FreeBSD 15 amd64)
+Download `bsdprism-1.0.pkg` from the **[Releases](https://github.com)** page and install it via `pkg`:
+```sh
+sudo pkg add bsdprism-1.0.pkg
+```
 
-- Modern and secure login: PineconeMC uses OAuth2 to log you in. This means that your credentials are never transferred to the launcher. Instead, you log into your account on the official Ely.by page in the browser, and Ely.by gives the launcher a token to access your account with limited privileges.
-- Skins support on servers: All other forks rely exclusively on authlib-injector to patch Minecraft to support Ely.by. But authlib-injector can't provide skins on servers that don't have a special skins plugin installed. PineconeMC uses Ely.by's official Authlib patches, allowing you to see skins anywhere
+## Building from Source
+1. Install build and runtime dependencies:
+```sh
+sudo pkg install -y git cmake-core ninja pkgconf qt6-base qt6-5compat qt6-svg qt6-networkauth qt6-tools kf6-extra-cmake-modules kf6-karchive cmark scdoc quazip-qt6 tomlplusplus libqrencode openjdk8 openjdk17 lwjgl lwjgl3 glfw openal-soft
+```
+2. Configure and compile:
+```sh
+JAVA_HOME=/usr/local/openjdk17 cmake -B build -G Ninja   -DCMAKE_BUILD_TYPE=Release   -DJAVA_HOME=/usr/local/openjdk17   -DLauncher_APP_BINARY_NAME="bsdprism"   -DLauncher_DISPLAY_NAME="BSDprism"   -DLauncher_BUILD_PLATFORM="freebsd"   -DBUILD_TESTING=OFF   -DENABLE_LTO=OFF
+nice -n 20 ninja -C build -j 1
+```
 
-## Installation
-
-- All downloads and instructions for PineconeMC can be found on the [Releases](https://github.com/ElyPrismLauncher/Launcher/releases/latest) page.
-- Last build status can be found in the [GitHub Actions](https://github.com/ElyPrismLauncher/Launcher/actions) tab.
-
-### Development Builds
-
-Please understand that these builds are not intended for most users. There may be bugs, and other instabilities. You have been warned.
-
-There are development builds available through:
-
-- [GitHub Actions](https://github.com/ElyPrismLauncher/Launcher/actions) (includes builds from pull requests opened by contributors)
-- [nightly.link](https://nightly.link/ElyPrismLauncher/Launcher/workflows/build/develop) (this will always point only to the latest version of develop)
-
-These have debug information in the binaries, so their file sizes are relatively larger.
-
-## Community & Support
-
-Feel free to create a GitHub issue if you find a bug or want to suggest a new feature. We have a Discord server where other community members can help you:
-
-[![Octol1ttle's Studio Discord server](https://discordapp.com/api/guilds/1201522867901313045/widget.png?style=banner3)](https://discord.gg/5kcBCvnbTp)
-
-## Building
-
-If you want to build PineconeMC yourself, check the [build instructions](https://prismlauncher.org/wiki/development/build-instructions).
-
-## The following comes from the original Prism Launcher README
-
-### Forking/Redistributing/Custom builds policy
-
-You are free to fork, redistribute and provide custom builds as long as you follow the terms of the [license](LICENSE) (this is a legal responsibility), and if you made code changes rather than just packaging a custom build, please do the following as a basic courtesy:
-
-- Make it clear that your fork is not Prism Launcher and is not endorsed by or affiliated with the Prism Launcher project (<https://prismlauncher.org>).
-- Go through [CMakeLists.txt](CMakeLists.txt) and change Prism Launcher's API keys to your own or set them to empty strings (`""`) to disable them (this way the program will still compile but the functionality requiring those keys will be disabled).
-
-If you have any questions or want any clarification on the above conditions please make an issue and ask us.
-
-If you are just building Prism Launcher for your distribution, please make sure to set the `Launcher_BUILD_PLATFORM` to a slug representing your distribution. Examples are `archlinux`, `fedora` and `nixpkgs`.
-
-Note that if you build this software without removing the provided API keys in [CMakeLists.txt](CMakeLists.txt) you are accepting the following terms and conditions:
-
-- [Microsoft Identity Platform Terms of Use](https://docs.microsoft.com/en-us/legal/microsoft-identity-platform/terms-of-use)
-- [CurseForge 3rd Party API Terms and Conditions](https://support.curseforge.com/en/support/solutions/articles/9000207405-curse-forge-3rd-party-api-terms-and-conditions)
-
-If you do not agree with these terms and conditions, then remove the associated API keys from the [CMakeLists.txt](CMakeLists.txt) file by setting them to an empty string (`""`).
-
-### License [![https://github.com/PrismLauncher/PrismLauncher/blob/develop/LICENSE](https://img.shields.io/github/license/PrismLauncher/PrismLauncher?label=License&logo=gnu&color=C4282D)](LICENSE)
-
-All launcher code is available under the GPL-3.0-only license.
-
-The logo and related assets are under the CC BY-SA 4.0 license.
+## License
+Licensed under the **GNU General Public License v3.0 (GPL-3.0)**. See `LICENSE` for details.
