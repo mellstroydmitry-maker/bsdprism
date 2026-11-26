@@ -316,18 +316,18 @@ QString HardwareInfo::cpuInfo()
 }
 
 #if defined(Q_OS_FREEBSD) || defined(Q_OS_OPENBSD)
-#include <cstdio>
+#include <sys/types.h>
+#include <sys/sysctl.h>
 
 uint64_t HardwareInfo::totalRamMiB()
 {
     uint64_t out = 0;
-
-    const bool success = readFromOutput("sysctl hw.physmem", [&](const QString& str) {
-        const uint64_t mem = str.mid(12).toULong();
-
-        // transforming kib -> mib
-        out = mem / 1024;
-    });
+    uint64_t mem = 0;
+    size_t len = sizeof(mem);
+    const bool success = (sysctlbyname("hw.physmem", &mem, &len, nullptr, 0) == 0);
+    if (success) {
+        out = mem / (1024 * 1024);
+    }
     if (!success) {
         qWarning() << "Could not get total RAM: could not read from sysctl";
         return 0;
@@ -350,6 +350,27 @@ uint64_t HardwareInfo::availableRamMiB()
 
 QStringList HardwareInfo::gpuInfo()
 {
+#if defined(Q_OS_FREEBSD)
+    QStringList gpus;
+    FILE* fp = popen("pciconf -lv | grep -A 3 -E \"^vgapci[0-9]\"", "r");
+    if (fp) {
+        char buf[512];
+        QString cur;
+        while (fgets(buf, sizeof(buf), fp)) {
+            QString line = QString::fromUtf8(buf).trimmed();
+            if (line.startsWith("vendor") || line.startsWith("device")) {
+                int q1 = line.indexOf('\'');
+                int q2 = line.lastIndexOf('\'');
+                if (q1 >= 0 && q2 > q1) {
+                    cur += (cur.isEmpty() ? "" : " ") + line.mid(q1 + 1, q2 - q1 - 1);
+                }
+            }
+        }
+        pclose(fp);
+        if (!cur.isEmpty()) gpus << cur;
+    }
+    if (!gpus.isEmpty()) return gpus;
+#endif
     return { "GPU discovery failed: not implemented for this OS" };
 }
 #endif

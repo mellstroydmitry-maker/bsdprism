@@ -99,7 +99,21 @@ void LauncherPartLaunch::executeTask()
 
     auto javaPath = FS::ResolveExecutable(instance->settings()->get("JavaPath").toString());
 
-    m_process.setProcessEnvironment(instance->createLaunchEnvironment());
+    auto launchEnv = instance->createLaunchEnvironment();
+#ifdef Q_OS_FREEBSD
+    launchEnv.insert("ALSOFT_DRIVERS", "oss");
+    launchEnv.insert("GLFW_PLATFORM", "x11");
+    launchEnv.remove("WAYLAND_DISPLAY");
+    launchEnv.insert("__GL_THREADED_OPTIMIZATIONS", "1");
+    QString javaDir = QFileInfo(javaPath).absolutePath();
+    QString jawtDir = QFileInfo(javaDir + "/../lib/amd64").canonicalFilePath();
+    if (jawtDir.isEmpty()) jawtDir = QFileInfo(javaDir + "/../jre/lib/amd64").canonicalFilePath();
+    QString ldPath = launchEnv.value("LD_LIBRARY_PATH");
+    QString bsdLibs = "/usr/local/lib:/usr/local/lib/lwjgl3:/usr/local/lib/lwjgl";
+    if (!jawtDir.isEmpty()) bsdLibs += ":" + jawtDir;
+    launchEnv.insert("LD_LIBRARY_PATH", ldPath.isEmpty() ? bsdLibs : (bsdLibs + ":" + ldPath));
+#endif
+    m_process.setProcessEnvironment(launchEnv);
 
     // make detachable - this will keep the process running even if the object is destroyed
     m_process.setDetachable(true);
@@ -110,11 +124,54 @@ void LauncherPartLaunch::executeTask()
     if (!legacyJarPath.isEmpty())
         classPath.prepend(legacyJarPath);
 
+#ifdef Q_OS_FREEBSD
+    bool isLwjgl2 = false;
+    for (int i = 0; i < classPath.size(); ++i) {
+        if (classPath[i].contains("/org/lwjgl/lwjgl/lwjgl/") || classPath[i].contains("/org/lwjgl/lwjgl/lwjgl_util/")) {
+            isLwjgl2 = true;
+            QString fname = QFileInfo(classPath[i]).fileName();
+            if (fname.startsWith("lwjgl-") && QFileInfo::exists("/usr/local/share/java/classes/lwjgl/lwjgl.jar")) {
+                classPath[i] = "/usr/local/share/java/classes/lwjgl/lwjgl.jar";
+            } else if (fname.startsWith("lwjgl_util-") && QFileInfo::exists("/usr/local/share/java/classes/lwjgl/lwjgl_util.jar")) {
+                classPath[i] = "/usr/local/share/java/classes/lwjgl/lwjgl_util.jar";
+            }
+        } else if (classPath[i].contains("/net/java/jinput/jinput/") && QFileInfo::exists("/usr/local/share/java/classes/jinput/jinput.jar")) {
+            classPath[i] = "/usr/local/share/java/classes/jinput/jinput.jar";
+        } else if (classPath[i].contains("/org/lwjgl/")) {
+            QString fname = QFileInfo(classPath[i]).fileName();
+            int dashVer = fname.lastIndexOf("-");
+            if (dashVer > 0) {
+                QString modName = fname.left(dashVer);
+                QString sysJar = "/usr/local/share/java/classes/lwjgl3/" + modName + ".jar";
+                if (QFileInfo::exists(sysJar)) {
+                    classPath[i] = sysJar;
+                }
+            }
+        }
+    }
+    args.removeAll("-XX:-ZUncommit");
+#endif
+
     auto natPath = instance->getNativePath();
 #ifdef Q_OS_WIN
     natPath = FS::getPathNameInLocal8bit(natPath);
 #endif
+#ifdef Q_OS_FREEBSD
+    QString libPaths = isLwjgl2
+        ? ("/usr/local/lib/lwjgl:/usr/local/lib:" + (jawtDir.isEmpty() ? "" : (jawtDir + ":")) + natPath)
+        : ("/usr/local/lib/lwjgl3:/usr/local/lib:" + natPath);
+    args << "-Djava.library.path=" + libPaths;
+    if (!isLwjgl2) {
+        args << "-Dorg.lwjgl.librarypath=/usr/local/lib/lwjgl3";
+        args << "-Dorg.lwjgl.glfw.libname=/usr/local/lib/libglfw.so";
+        args << "-Dorg.lwjgl.openal.libname=/usr/local/lib/libopenal.so";
+        if (QFileInfo::exists("/usr/local/share/bsdprism-glfw-fix.jar")) {
+            args << "-javaagent:/usr/local/share/bsdprism-glfw-fix.jar";
+        }
+    }
+#else
     args << "-Djava.library.path=" + natPath;
+#endif
 
     args << "-cp";
 #ifdef Q_OS_WIN

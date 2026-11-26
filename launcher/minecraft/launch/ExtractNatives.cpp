@@ -52,6 +52,11 @@ static bool unzipNatives(QString source, QString targetFolder, bool applyJnilibH
         if (applyJnilibHack) {
             name = replaceSuffix(name, ".jnilib", ".dylib");
         }
+#ifdef Q_OS_FREEBSD
+        if (lowercase.endsWith(".so") || lowercase.contains(".so.")) {
+            return true;
+        }
+#endif
         QString absFilePath = directory.absoluteFilePath(name);
         return f->writeFile(ext, absFilePath, directory);
     });
